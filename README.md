@@ -6,7 +6,7 @@
  Input:
  Recording file (.bin,.h5.,.continuous),
  Channel map (.mat),
- Sampling rate (hZ),
+ Sampling rate (Hz),
  Time bin length (seconds)
  
  Output:
