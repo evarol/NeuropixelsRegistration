@@ -15,7 +15,7 @@ sample_rate=30000; %%Set the sampling rate of recording
 
 
 %% DATA FORMAT
-dataset='NP-binary'; %types of data format (NP-binary,NP-H5,EPHYS)
+dataset='NP-H5'; %types of data format (NP-binary,NP-H5,EPHYS)
 
 
 
@@ -171,11 +171,10 @@ end
 
 %% decentralized displacement estimate
 
-H0=H;
 minmax = @(x)((x-min(x(:)))./max(x(:)-min(x(:))));
-H=double((minmax(H)>=0.01));
+H0=double((minmax(H)>=0.01));
 
-X=spatial_icdf(cumsum(H,1)./sum(H,1),linspace(0,1,40));
+X=spatial_icdf(cumsum(H0,1)./sum(H0,1),linspace(0,1,40));
 
 D=nan(size(X,2));
 C=nan(size(X,2));
@@ -186,18 +185,19 @@ end
 
 p=mean(D-nanmean(D,2));
 Dcorr=D;
-% Dcorr(minmax(C)>=graythresh(minmax(C)))=nan;
 Dcorr(minmax(C)>=graythresh(minmax(C)))=nan;
 pcorr=nanmean(Dcorr-nanmean(Dcorr,2));
 p=-(p-mean(p));
 pcorr=-(pcorr-mean(pcorr));
+Dcorr_disp=Dcorr;
+Dcorr_disp(isnan(Dcorr))=0;
 close all
 subplot(2,2,1)
 imagesc(flipud(H.*H0));xlabel('Time bins (1s)');ylabel('Y-position (um)');title('Features');colormap(othercolor('Blues9'));
 subplot(2,2,2)
-imagesc(D);xlabel('Time bins (1s)');ylabel('TIme bins (1s)');title('Pairwise Displacement estimates');colormap(othercolor('BuDRd_12'));colorbar;axis square
+imagesc(D,[-max(abs(D(:))) max(abs(D(:)))]);xlabel('Time bins (1s)');ylabel('TIme bins (1s)');title('Pairwise Displacement estimates');colormap(othercolor('BuDRd_12'));colorbar;axis square
 subplot(2,2,4)
-imagesc(Dcorr);xlabel('Time bins (1s)');ylabel('TIme bins (1s)');title('Pairwise Displacement estimates (error corrected)');colormap(othercolor('BuDRd_12'));colorbar;axis square
+imagesc(Dcorr_disp,[-max(abs(D(:))) max(abs(D(:)))]);xlabel('Time bins (1s)');ylabel('TIme bins (1s)');title('Pairwise Displacement estimates (error corrected)');colormap(othercolor('BuDRd_12'));colorbar;axis square
 subplot(2,2,3)
 plot(p);hold on;plot(imgaussfilt(p,20),'LineWidth',2);plot(pcorr);plot(imgaussfilt(pcorr,20),'LineWidth',2);legend({'Displacement estimate','Smoothed displacement estimate','Error corrected displacement estimate','Smoothed error corrected estimate'});xlabel('Time bin (1s)');ylabel('Displacement (um)');title('Global displacement estimate');
 
