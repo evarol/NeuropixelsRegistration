@@ -17,6 +17,7 @@
 ![Demo](https://github.com/evarol/NeuropixelsRegistration/blob/master/fig1.png)
 
 References:
+
 Erdem Varol, Julien Boussard, Nishchal Dethe, Liam Paninski.
 
 Decentralized motion inference and registration of Neuropixels data. 
