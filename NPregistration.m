@@ -199,9 +199,3 @@ for t=1:10
     D(S==1)=nan;
 end
 
-
-plot(p,'LineWidth',2);xlabel('Time bins');ylabel('Displacement');grid on;title('Displacement estimate');
-
-totalTime=toc(globalTic);
-
-disp(['Total time: ' num2str(totalTime/60) ' minutes. ' num2str(totalTime/length(data)) ' seconds per one-second time bin of data.']);
