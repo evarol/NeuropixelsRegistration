@@ -7,23 +7,28 @@ close all
 
 %% PARAMETERS
 globalTic=tic;
-timebins=1000; %% set the number of time bins to use
+timebins=200; %% set the number of time bins to use
 mintime=0;%starting time point (in seconds)
-maxtime=999;%ending time point (in seconds)
+maxtime=1999;%ending time point (in seconds)
 timestep=1; %seconds (how big should each time bin be)
 sample_rate=30000; %%Set the sampling rate of recording
-
-
+threshold=4;
+L=32;
+sigma=0;
 %% DATA FORMAT
-dataset='NP-binary'; %types of data format (NP-binary,NP-H5,EPHYS)
+dataset='NP-binary2'; %types of data format (NP-binary,NP-H5,EPHYS)
 
 
 
 %% helper functions
-ptp=@(x)(movmax(x,121,2)-movmin(x,121,2));
+times=round(linspace(mintime,maxtime,timebins));
+ptp=@(x)(movmax(x,25,2)-movmin(x,25,2));
 vec=@(x)(x(:));
-times=round(linspace(0,999,timebins));
-
+bp = @(x)(reshape(bandpass(vec(double(x)'),[300 2000],30000),size(x'))');
+thresh = @(x,t)(x.*(x>t));
+minmax = @(x)((x-min(x(:)))./max(x(:)-min(x(:))));
+[b,a] = butter(3,[300 2000]/(30000/2));
+bp2 = @(x)(reshape(filter(b,a,vec(double(x)')),size(x'))');
 
 %% DATA LOADING
 %% see different examples of data formats supported)
@@ -32,7 +37,7 @@ if strcmpi(dataset,'NP-H5');
     %% time bin loading - h5 files
     bestsnr=0;
     tic
-    for t=1:length(times)-1
+    for t=1:length(times)
         [X,geom,data{t}]=batch_extract('erdem_data.h5',sample_rate,times(t),times(t)+timestep,1000);
         
         [maxsnr,maxchan]=max(quantile(X,0.9,2)-quantile(X,0.1,2));
@@ -61,9 +66,9 @@ if strcmpi(dataset,'NP-binary')
     geom(:,2)=dataset_info.ycoords;
     bestsnr=0;
     tic
-    for t=1:length(times)-1
-        fseek(fileID,128*30000*times(t),'bof');
-        data{t} = fread(fileID, [128 30000], '*int16');
+    for t=1:length(times)
+        fseek(fileID,length(dataset_info.chanMap)*30000*times(t),'bof');
+        data{t} = fread(fileID, [length(dataset_info.chanMap) 30000], '*int16');
         clc
         fprintf(['Loading time bins (' num2str(t) '/' num2str(length(times)) ')...\n']);
         fprintf(['\n' repmat('.',1,50) '\n\n'])
@@ -85,7 +90,7 @@ if strcmpi(dataset,'NP-binary2')
     geom(:,2)=dataset_info.ycoords;
     bestsnr=0;
     tic
-    for t=1:length(times)-1
+    for t=1:length(times)
         fseek(fileID,length(dataset_info.chanMap)*30000*times(t),'bof');
         data{t} = fread(fileID, [length(dataset_info.chanMap) 30000], '*int16');
         clc
@@ -133,14 +138,14 @@ end
 
 
 %% MAIN ROUTINE
-%% background removal
+%% Filtering / background removal
+
 
 tic
 for t=1:length(data)
-    
-    data_denoised{t}=sinkhorn_denoise(ptp(data{t}),0.95,2);
+    data{t}=bp2(data{t});
     clc
-    fprintf(['Background removing (' num2str(t) '/' num2str(length(times)) ')...\n']);
+    fprintf(['Bandpass filtering (' num2str(t) '/' num2str(length(times)) ')...\n']);
     fprintf(['\n' repmat('.',1,50) '\n\n'])
     for tt=1:round(t*50/length(times))
         fprintf('\b|\n');
@@ -150,16 +155,22 @@ for t=1:length(data)
 end
 
 
-%% featurization
-M=mapping_matrix(geom,[repmat(mean(geom(:,1)),size((min(geom(:,2)):max(geom(:,2)))',1),1) (min(geom(:,2)):max(geom(:,2)))'],'krigging',1,0.1,28);
-H=zeros(size(M,1),length(data));
-tic
+
+
+%% feature extraction
+[x,y]=meshgrid((1:max(geom(:,1))),(1:max(geom(:,2))));
+coor=[vec(permute(x,[2 1])) vec(permute(y,[2 1]))];
+M=mapping_matrix(geom,coor,'krigging',1,sigma,L);
+tic;
 for t=1:length(data)
     
-    %     H(:,t)=M*max(log(max(double(data_denoised{t}),[],2)),0);
-    H(:,t)=sum(max(M*double(data_denoised{t}),0),2);
+    A=thresh(ptp(decorrelate(data{t},2)),threshold);
+    E=zeros(size(A,1),1);
+    E(any(A>0,2))=sum(A(any(A>0,2),:),2)./sum(A(any(A>0,2),:)>0,2);
+    E=max(E-threshold,0);
+    I{t}=max(reshape(M*E,size(x')),0);
     clc
-    fprintf(['Feature generating (' num2str(t) '/' num2str(length(times)) ')...\n']);
+    fprintf(['Generating images (' num2str(t) '/' num2str(length(times)) ')...\n']);
     fprintf(['\n' repmat('.',1,50) '\n\n'])
     for tt=1:round(t*50/length(times))
         fprintf('\b|\n');
@@ -171,36 +182,25 @@ end
 
 %% decentralized displacement estimate
 
-H0=H;
-minmax = @(x)((x-min(x(:)))./max(x(:)-min(x(:))));
-H=double((minmax(H)>=0.01));
+[Dx,Dy,cmax]=pairwise_reg(I,1,100);
 
-X=spatial_icdf(cumsum(H,1)./sum(H,1),linspace(0,1,40));
 
-D=nan(size(X,2));
-C=nan(size(X,2));
-for i=1:size(X,2)
-    D(i,:)=mean(X(:,i)-X,1)';
-    C(i,:)=var(X(:,i)-X,[],1)';
+D=Dy';
+lambda=10;
+D0=D;
+S=zeros(size(D));
+p0=nanmean(D0-nanmean(D0,2),1);
+
+for t=1:10
+    p=nanmean(D-l1tf(nanmean(D,2),lambda),1);
+    P=D0-l1tf(nanmean(D,2),lambda);
+    S=abs(zscore(P,[],1))>2;S=or(S,S');
+    D=D0;
+    D(S==1)=nan;
 end
 
-p=mean(D-nanmean(D,2));
-Dcorr=D;
-% Dcorr(minmax(C)>=graythresh(minmax(C)))=nan;
-Dcorr(minmax(C)>=graythresh(minmax(C)))=nan;
-pcorr=nanmean(Dcorr-nanmean(Dcorr,2));
-p=-(p-mean(p));
-pcorr=-(pcorr-mean(pcorr));
-close all
-subplot(2,2,1)
-imagesc(flipud(H.*H0));xlabel('Time bins (1s)');ylabel('Y-position (um)');title('Features');colormap(othercolor('Blues9'));
-subplot(2,2,2)
-imagesc(D);xlabel('Time bins (1s)');ylabel('TIme bins (1s)');title('Pairwise Displacement estimates');colormap(othercolor('BuDRd_12'));colorbar;axis square
-subplot(2,2,4)
-imagesc(Dcorr);xlabel('Time bins (1s)');ylabel('TIme bins (1s)');title('Pairwise Displacement estimates (error corrected)');colormap(othercolor('BuDRd_12'));colorbar;axis square
-subplot(2,2,3)
-plot(p);hold on;plot(imgaussfilt(p,20),'LineWidth',2);plot(pcorr);plot(imgaussfilt(pcorr,20),'LineWidth',2);legend({'Displacement estimate','Smoothed displacement estimate','Error corrected displacement estimate','Smoothed error corrected estimate'});xlabel('Time bin (1s)');ylabel('Displacement (um)');title('Global displacement estimate');
 
+plot(p,'LineWidth',2);xlabel('Time bins');ylabel('Displacement');grid on;title('Displacement estimate');
 
 totalTime=toc(globalTic);
 
