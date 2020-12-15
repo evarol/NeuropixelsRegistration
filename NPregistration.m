@@ -9,14 +9,14 @@ close all
 globalTic=tic;
 timebins=200; %% set the number of time bins to use
 mintime=0;%starting time point (in seconds)
-maxtime=1999;%ending time point (in seconds)
+maxtime=999;%ending time point (in seconds)
 timestep=1; %seconds (how big should each time bin be)
 sample_rate=30000; %%Set the sampling rate of recording
 threshold=4;
-L=32;
+L=28;
 sigma=0;
 %% DATA FORMAT
-dataset='NP-binary2'; %types of data format (NP-binary,NP-H5,EPHYS)
+dataset='NP-H5'; %types of data format (NP-binary,NP-H5,EPHYS)
 
 
 
@@ -38,7 +38,7 @@ if strcmpi(dataset,'NP-H5');
     bestsnr=0;
     tic
     for t=1:length(times)
-        [X,geom,data{t}]=batch_extract('erdem_data.h5',sample_rate,times(t),times(t)+timestep,1000);
+        [X,geom,data{t}]=batch_extract('\Users\Erdem\Dropbox\Projects\spike_drift\neuropixel_data.h5',sample_rate,times(t),times(t)+timestep,1000);
         
         [maxsnr,maxchan]=max(quantile(X,0.9,2)-quantile(X,0.1,2));
         
@@ -143,7 +143,7 @@ end
 
 tic
 for t=1:length(data)
-    data{t}=bp2(data{t});
+%     data{t}=bp2(data{t});
     clc
     fprintf(['Bandpass filtering (' num2str(t) '/' num2str(length(times)) ')...\n']);
     fprintf(['\n' repmat('.',1,50) '\n\n'])
@@ -158,13 +158,15 @@ end
 
 
 %% feature extraction
-[x,y]=meshgrid((1:max(geom(:,1))),(1:max(geom(:,2))));
+nhood=L;
+geom=geom-min(geom,[],1)+1;
+[x,y]=meshgrid((min(geom(:,1)):max(geom(:,1))),(min(geom(:,2)):max(geom(:,2))));
 coor=[vec(permute(x,[2 1])) vec(permute(y,[2 1]))];
 M=mapping_matrix(geom,coor,'krigging',1,sigma,L);
 tic;
 for t=1:length(data)
     
-    A=thresh(ptp(decorrelate(data{t},2)),threshold);
+    A=thresh(ptp(decorrelate(bp2(data{t}),2)),threshold);
     E=zeros(size(A,1),1);
     E(any(A>0,2))=sum(A(any(A>0,2),:),2)./sum(A(any(A>0,2),:)>0,2);
     E=max(E-threshold,0);
@@ -179,18 +181,22 @@ for t=1:length(data)
     disp(['Time elapsed (minutes): ' num2str(T/60) ' Time remaining (minutes): ' num2str((length(times)-t)*(T/t)*(1/60))]);
 end
 
+%% vignette correction
 
+vignette_estimator_2;
 %% decentralized displacement estimate
 
-[Dx,Dy,cmax]=pairwise_reg(I,1,100);
+ [Dx,Dy,cmax]=pairwise_reg(Ic,1,100);
 
 
 D=Dy';
-lambda=10;
+lambda=1;
 D0=D;
 S=zeros(size(D));
 p0=nanmean(D0-nanmean(D0,2),1);
 
+
+% robust regression
 for t=1:10
     p=nanmean(D-l1tf(nanmean(D,2),lambda),1);
     P=D0-l1tf(nanmean(D,2),lambda);
@@ -198,4 +204,11 @@ for t=1:10
     D=D0;
     D(S==1)=nan;
 end
+
+
+plot(p,'LineWidth',2,'Color',[0.5 0 0.5 0.5]);xlabel('Time bins');ylabel('Displacement');title('Displacement estimate');grid on;
+
+totalTime=toc(globalTic);
+
+disp(['Total time: ' num2str(totalTime/60) ' minutes. ' num2str(totalTime/length(data)) ' seconds per one-second time bin of data.']);
 
