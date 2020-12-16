@@ -7,7 +7,7 @@ for i=1:length(dist)
         template=[template;I{t}(Dm==0)];
         target=[target;I{t}(Dm==dist(i))];
     end
-    [~,beta(:,i)]=linhistmatch(target,template,20,'regular');
+    [~,beta(:,i)]=linhistmatch(target,template,200,'regular');
     i
 end
 
@@ -18,8 +18,8 @@ for i=1:length(dist)
     dfield(Dm==dist(i))=beta(2,i);
 end
 
-Sv=reshape(vfield,size(x'));
-Dv=reshape(dfield,size(x'));
+Sv=imgaussfilt(reshape(vfield,size(x')),2);
+Dv=imgaussfilt(reshape(dfield,size(x')),2);
 Dm=reshape(Dm,size(Sv));
 
 for t=1:length(data)
@@ -44,7 +44,7 @@ mind=min(size(Sv));
 subplot(2,2,1);imagesc([Sv(1:mind,1:mind)]);colorbar;xlabel('y (um)');ylabel('x (um)');title('Multiplicative correction');axis square
 subplot(2,2,2);imagesc([Dv(1:mind,1:mind)]);colorbar;xlabel('y (um)');ylabel('x (um)');title('Additive correction');axis square
 subplot(2,2,3);imagesc([Dm(1:mind,1:mind)]);colorbar;xlabel('y (um)');ylabel('x (um)');title('Distance to nearest probe (um)');axis square
-subplot(2,2,4);imagesc([(ones(mind).*Sv(1:mind,1:mind)+Dv(1:mind,1:mind))]);colorbar;xlabel('y (um)');ylabel('x (um)');title('Voltage fall-off');axis square
+subplot(2,2,4);imagesc(ones(mind).*Sv(1:mind,1:mind)+Dv(1:mind,1:mind));colorbar;xlabel('y (um)');ylabel('x (um)');title('Voltage fall-off');axis square
 % figure
 % while 1==1
 %     for t=1:length(data)

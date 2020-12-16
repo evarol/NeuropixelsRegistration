@@ -10,8 +10,8 @@ geom=h5read(h5file,'/geom');
 
 % data=double(data(:,:))./std(double(data),[],2);
 geom=geom';
-geom=geom-min(geom,[],1);
-geom=geom+1;
+% geom=geom-min(geom,[],1);
+% geom=geom+1;
 
 
 % y_map=exp(-pdist2((1:max(geom(:,2)))',geom(:,2)).^2/1000)>=0.9;
@@ -21,10 +21,10 @@ geom=geom+1;
 % My=y_map*movmax(double(data),121,2);
 % Ny=y_map*movmin(double(data),121,2);
 % X=imresize(My-Ny,[size(My,1) timeDS*(-starttime+endtime)],'nearest');
-My=movmax(double(data),121,2);
-Ny=movmin(double(data),121,2);
-X=My-Ny;
-
+% My=movmax(double(data),121,2);
+% Ny=movmin(double(data),121,2);
+% X=My-Ny;
+X=[];
 if nargout==4
     data_filter=zeros(size(data));
     for t=1:size(data,1)

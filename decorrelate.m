@@ -4,8 +4,8 @@ if nargin<2
 end
 
 for i=1:iter
-    X=zscore(X,[],1);
     X=zscore(X,[],2);
+    X=zscore(X,[],1);
 end
 
 

@@ -12,7 +12,7 @@ mintime=0;%starting time point (in seconds)
 maxtime=999;%ending time point (in seconds)
 timestep=1; %seconds (how big should each time bin be)
 sample_rate=30000; %%Set the sampling rate of recording
-threshold=4;
+threshold=2;
 L=28;
 sigma=0;
 %% DATA FORMAT
@@ -38,13 +38,11 @@ if strcmpi(dataset,'NP-H5');
     bestsnr=0;
     tic
     for t=1:length(times)
+        
         [X,geom,data{t}]=batch_extract('\Users\Erdem\Dropbox\Projects\spike_drift\neuropixel_data.h5',sample_rate,times(t),times(t)+timestep,1000);
         
-        [maxsnr,maxchan]=max(quantile(X,0.9,2)-quantile(X,0.1,2));
         
-        if maxsnr>bestsnr
-            max_chan_bin=[t maxchan];
-        end
+        
         clc
         fprintf(['Loading time bins (' num2str(t) '/' num2str(length(times)) ')...\n']);
         fprintf(['\n' repmat('.',1,50) '\n\n'])
@@ -166,9 +164,12 @@ M=mapping_matrix(geom,coor,'krigging',1,sigma,L);
 tic;
 for t=1:length(data)
     
-    A=thresh(ptp(decorrelate(bp2(data{t}),2)),threshold);
-    E=zeros(size(A,1),1);
-    E(any(A>0,2))=sum(A(any(A>0,2),:),2)./sum(A(any(A>0,2),:)>0,2);
+    A=thresh(ptp(bp2(decorrelate(single(data{t}),2))),threshold);
+%     E=zeros(size(A,1),1);
+%     E(any(A>0,2))=sum(A(any(A>0,2),:),2)./sum(A(any(A>0,2),:)>0,2);
+%     E=max(E-threshold,0);
+    A(A==0)=nan;
+    E=nanmean(A,2);E(isnan(E))=0;
     E=max(E-threshold,0);
     I{t}=max(reshape(M*E,size(x')),0);
     clc
@@ -185,7 +186,6 @@ end
 
 vignette_estimator_2;
 %% decentralized displacement estimate
-
  [Dx,Dy,cmax]=pairwise_reg(Ic,1,100);
 
 
@@ -205,8 +205,32 @@ for t=1:10
     D(S==1)=nan;
 end
 
+py0=p0;
+py=p;
 
-plot(p,'LineWidth',2,'Color',[0.5 0 0.5 0.5]);xlabel('Time bins');ylabel('Displacement');title('Displacement estimate');grid on;
+D=Dx';
+lambda=1;
+D0=D;
+S=zeros(size(D));
+p0=nanmean(D0-nanmean(D0,2),1);
+
+
+% robust regression
+for t=1:10
+    p=nanmean(D-l1tf(nanmean(D,2),lambda),1);
+    P=D0-l1tf(nanmean(D,2),lambda);
+    S=abs(zscore(P,[],1))>2;S=or(S,S');
+    D=D0;
+    D(S==1)=nan;
+end
+px0=p0;
+px=p;
+
+subplot(1,2,1);
+plot(py-py(1),'LineWidth',2,'Color',[0.5 0 0.5 0.5]);xlabel('Time bins');ylabel('Displacement');title('Y-Displacement estimate');grid on;
+
+subplot(1,2,2);
+plot(px-px(1),'LineWidth',2,'Color',[0 0.5 0.5 0.5]);xlabel('Time bins');ylabel('Displacement');title('X-Displacement estimate');grid on;
 
 totalTime=toc(globalTic);
 
