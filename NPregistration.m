@@ -15,7 +15,7 @@ sample_rate=30000; %%Set the sampling rate of recording
 
 
 %% DATA FORMAT
-dataset='NP-H5'; %types of data format (NP-binary,NP-H5,EPHYS)
+dataset='EPHYS'; %types of data format (NP-binary,NP-H5,EPHYS)
 
 
 
@@ -107,15 +107,14 @@ if strcmpi(dataset,'EPHYS');
     %% time bin loading - EPHYS FILES
     bestsnr=0;
     tic
-    for t=1:32
-        for i=1:32
-            [tmp, timestamps, info] = load_open_ephys_data(['/Users/erdem/Downloads/2019-11-18_16-27-36_HR46_R0_001/100_CH' num2str(i) '.continuous']);
-            if i==1
-                data=zeros(32,size(tmp,1));
+    dataset_info=load('/Users/erdem/Downloads/buz32chMap.mat');
+    for t=1:8
+            [tmp, timestamps, info] = load_open_ephys_data(['/Users/erdem/Downloads/2019-11-18_16-27-36_HR46_R0_001/100_CH' num2str(t) '.continuous']);
+            if t==1
+                data0=zeros(8,size(tmp,1));
             end
-            data(i,:)=tmp';
+            data0(t,:)=tmp';
             i
-        end
         
         
         clc
@@ -129,6 +128,23 @@ if strcmpi(dataset,'EPHYS');
         
     end
     
+    rec_length=floor(size(data0,2)/24000);
+    tic
+    for t=1:rec_length
+        data{t}=data0(:,(t-1)*24000+1:t*24000);
+             clc
+        fprintf(['Loading time bins (' num2str(t) '/' num2str(rec_length) ')...\n']);
+        fprintf(['\n' repmat('.',1,50) '\n\n'])
+        for tt=1:round(t*50/rec_length)
+            fprintf('\b|\n');
+        end
+        T=toc;
+        disp(['Time elapsed (minutes): ' num2str(T/60) ' Time remaining (minutes): ' num2str((rec_length-t)*(T/t)*(1/60))]);
+    end
+    geom(:,1)=dataset_info.xcoords(1:8,:);
+    geom(:,2)=dataset_info.ycoords(1:8,:);
+    
+    clear data0;
 end
 
 
@@ -138,7 +154,7 @@ end
 tic
 for t=1:length(data)
     
-    data_denoised{t}=sinkhorn_denoise(ptp(data{t}),0.95,2);
+    data_denoised{t}=sinkhorn_denoise(ptp(data{t}),0.5,2);
     clc
     fprintf(['Background removing (' num2str(t) '/' num2str(length(times)) ')...\n']);
     fprintf(['\n' repmat('.',1,50) '\n\n'])
@@ -171,36 +187,7 @@ end
 
 %% decentralized displacement estimate
 
-minmax = @(x)((x-min(x(:)))./max(x(:)-min(x(:))));
-H0=double((minmax(H)>=0.01));
-
-X=spatial_icdf(cumsum(H0,1)./sum(H0,1),linspace(0,1,40));
-
-D=nan(size(X,2));
-C=nan(size(X,2));
-for i=1:size(X,2)
-    D(i,:)=mean(X(:,i)-X,1)';
-    C(i,:)=var(X(:,i)-X,[],1)';
-end
-
-p=mean(D-nanmean(D,2));
-Dcorr=D;
-Dcorr(minmax(C)>=graythresh(minmax(C)))=nan;
-pcorr=nanmean(Dcorr-nanmean(Dcorr,2));
-p=-(p-mean(p));
-pcorr=-(pcorr-mean(pcorr));
-Dcorr_disp=Dcorr;
-Dcorr_disp(isnan(Dcorr))=0;
-close all
-subplot(2,2,1)
-imagesc(flipud(H.*H0));xlabel('Time bins (1s)');ylabel('Y-position (um)');title('Features');colormap(othercolor('Blues9'));
-subplot(2,2,2)
-imagesc(D,[-max(abs(D(:))) max(abs(D(:)))]);xlabel('Time bins (1s)');ylabel('TIme bins (1s)');title('Pairwise Displacement estimates');colormap(othercolor('BuDRd_12'));colorbar;axis square
-subplot(2,2,4)
-imagesc(Dcorr_disp,[-max(abs(D(:))) max(abs(D(:)))]);xlabel('Time bins (1s)');ylabel('TIme bins (1s)');title('Pairwise Displacement estimates (error corrected)');colormap(othercolor('BuDRd_12'));colorbar;axis square
-subplot(2,2,3)
-plot(p);hold on;plot(imgaussfilt(p,20),'LineWidth',2);plot(pcorr);plot(imgaussfilt(pcorr,20),'LineWidth',2);legend({'Displacement estimate','Smoothed displacement estimate','Error corrected displacement estimate','Smoothed error corrected estimate'});xlabel('Time bin (1s)');ylabel('Displacement (um)');title('Global displacement estimate');
-
+`
 
 totalTime=toc(globalTic);
 
