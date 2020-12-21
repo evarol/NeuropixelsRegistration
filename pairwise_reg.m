@@ -1,4 +1,4 @@
-function [Dx,Dy,cmax]=pairwise_reg(H,subblocks,us)
+function [Dx,Dy,py,px,cmax]=pairwise_reg(H,subblocks,us)
 
 tmp=linspace(1,size(H{1},2),subblocks+1);
 for s=1:subblocks
@@ -40,4 +40,41 @@ for i=1:length(H)
     end
 end
 
-    cmax=[];
+cmax=[];
+
+D=mean(Dy,3)';
+lambda=1;
+D0=D;
+S=zeros(size(D));
+p0=nanmean(D0-nanmean(D0,2),1);
+
+
+% robust regression
+for t=1:10
+    p=nanmean(D-l1tf(nanmean(D,2),lambda),1);
+    P=D0-l1tf(nanmean(D,2),lambda);
+    S=abs(zscore(P,[],1))>2;S=or(S,S');
+    D=D0;
+    D(S==1)=nan;
+end
+
+py0=p0;
+py=p;
+
+D=mean(Dx,3)';
+lambda=1;
+D0=D;
+S=zeros(size(D));
+p0=nanmean(D0-nanmean(D0,2),1);
+
+
+% robust regression
+for t=1:10
+    p=nanmean(D-l1tf(nanmean(D,2),lambda),1);
+    P=D0-l1tf(nanmean(D,2),lambda);
+    S=abs(zscore(P,[],1))>2;S=or(S,S');
+    D=D0;
+    D(S==1)=nan;
+end
+px0=p0;
+px=p;
