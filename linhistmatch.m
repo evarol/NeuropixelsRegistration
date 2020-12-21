@@ -24,17 +24,16 @@ bhat=histc(b,bbins)';
 % weighted linear regression of the matching quantiles
 if strcmpi(type,'non-negative')
     beta=lsqnonneg([abins ones(size(abins,1),1)],bbins);
-%     beta=lsqnonneg([abins],bbins);beta(2)=0;
 elseif strcmpi(type,'regular')
     beta=linsolve([abins ones(size(abins,1),1)],bbins);
-%       beta=linsolve([abins],bbins);beta(2)=0;
 end
 %transformed time series with nan's put back in
+
 atransform=nan(size(a_nan_idx));
 atransform(a_nan_idx)=a*beta(1) + beta(2);
 
 %wasserstein distance computation
 % atransformhat = histc(atransform,bbins)'; %discretizing the transformed time series
 % distance=wdist(atransformhat,bhat,1); %wasserstein distance computation between atransform and b
-distance=[];
+distance=[]; %% turned this off since it seems to be not too useful
 end

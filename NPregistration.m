@@ -12,9 +12,10 @@ mintime=0;%starting time point (in seconds)
 maxtime=1999;%ending time point (in seconds)
 timestep=1; %seconds (how big should each time bin be)
 sample_rate=30000; %%Set the sampling rate of recording
-threshold=6;
-L=32;
-sigma=0;
+threshold=6; %%standard deviation threshold to deem an event a spike
+numbins=100; % number of bins for histogram normalization (for vignetting)
+L=32; %% GP length scale
+sigma=0; %% GP bias sigma
 %% DATA FORMAT
 dataset='NP-binary2'; %types of data format (NP-binary,NP-H5,EPHYS)
 
@@ -152,11 +153,10 @@ end
 
 
 %% MAIN ROUTINE
-%% Filtering / background removal
 
 
 
-%% feature extraction
+%% feature extraction - generating images of average PTPs mapped to points in space
 nhood=L;
 geom=geom-min(geom,[],1)+1;
 [x,y]=meshgrid((min(geom(:,1)):max(geom(:,1))),(min(geom(:,2)):max(geom(:,2))));
@@ -170,12 +170,6 @@ for t=1:length(data)
     E{t}=zeros(size(A,1),1);
     E{t}(any(A>0,2))=sum(A(any(A>0,2),:),2)./sum(A(any(A>0,2),:)>0,2);
     E{t}=max(E{t}-threshold,0);
-    
-    %     A=thresh(ptp(bp2(decorrelate(single(data{t}),2))),threshold);
-    %     A(A==0)=nan;
-    %     E=nanmean(A,2);E(isnan(E))=0;
-    %     E=max(E-threshold,0);
-    
     I{t}=max(reshape(M*E{t},size(x')),0);
     clc
     fprintf(['Generating images (' num2str(t) '/' num2str(length(times)) ')...\n']);
@@ -190,18 +184,18 @@ end
 
 %% decentralized displacement estimate
 
-[Dx,Dy,py,px,cmax]=pairwise_reg(I,1,100);
+[Dx,Dy,py,px,cmax]=pairwise_reg(I,1,100); %% use images to do pairwise registration and decentralized displacement estimates
 
 
 %% Vignetting correction using histogram normalization
 
 %% Unregistered spikes and histograms for the purpose of visualization
 for t=1:length(data)
-    H{t}=quantile(decorrelate(bp2(data{t}),2),linspace(0,1,100),2); %% histograms
+    H{t}=quantile(decorrelate(bp2(data{t}),2),linspace(0,1,numbins),2); %% histograms
     timebindata=decorrelate(bp2(data{t}),2);
     P=ptp(timebindata);
     for i=1:size(data{t},1)
-        spikes{i,t,1}=find(P(i,:)>=6); % spike times
+        spikes{i,t,1}=find(P(i,:)>=threshold); % spike times
         spikes{i,t,2}=P(i,spikes{i,t,1}); % spike amplitude
     end
 end
@@ -211,9 +205,9 @@ for t=1:length(data)
     Mi=interpolation_matrix(geom,[px(t) py(t)],'krigging',1,0,L);
     timebindata=decorrelate(Mi*bp2(data{t}),2);
     P=ptp(timebindata);
-    Hr{t}=quantile(timebindata,linspace(0,1,100),2);
+    Hr{t}=quantile(timebindata,linspace(0,1,numbins),2);
     for i=1:size(data{t},1)
-        spikes2{i,t,1}=find(P(i,:)>=6); % spike times
+        spikes2{i,t,1}=find(P(i,:)>=threshold); % spike times
         spikes2{i,t,2}=P(i,spikes2{i,t,1}); % spike amplitude
     end
     t
@@ -230,10 +224,10 @@ for t=1:length(data)
     timebindata=decorrelate(Mi*bp2(data{t}),2);
     
     for i=1:size(Hr{t},1)
-        [Hrc{t}(i,:),beta]=linhistmatch(Hr{t}(i,:),template(i,:),10,'regular'); % corrected histograms
+        [Hrc{t}(i,:),beta]=linhistmatch(Hr{t}(i,:),template(i,:),10,'regular'); % histogram matching routine
         data_reg{t}(i,:)=timebindata(i,:)*beta(1) + beta(2); %%%%%%%%%<<<----REGISTERED + HISTOGRAM CORRECTED DATA
         P=ptp(timebindata(i,:)*beta(1)+beta(2));
-        spikes3{i,t,1}=find(P>=6); % spike times
+        spikes3{i,t,1}=find(P>=threshold); % spike times
         spikes3{i,t,2}=P(spikes3{i,t,1}); % spike amplitude
         [t i]
     end
@@ -246,8 +240,8 @@ for i=1:size(Hr{t},1)
     for t=1:length(data)
         G(:,t)=Hr{t}(i,:)';
     end
-    beta{i}=pinv([vec(ones(size(G,1),1)*py) vec(ones(size(G,1),1)*px) ones(size(vec(ones(size(G,1),1)*py)))])*vec(G);
-    Gregressed = reshape(vec(G) - [vec(ones(size(G,1),1)*py) vec(ones(size(G,1),1)*px)]*beta{i}(1:2),size(G));
+    beta{i}=pinv([vec(ones(size(G,1),1)*py) vec(ones(size(G,1),1)*px) ones(size(vec(ones(size(G,1),1)*py)))])*vec(G); %% estimate regression terms
+    Gregressed = reshape(vec(G) - [vec(ones(size(G,1),1)*py) vec(ones(size(G,1),1)*px)]*beta{i}(1:2),size(G)); %% regress out terms dependent on displacement (keep the intercept + residual)
     for t=1:length(data)
         Hr2{t}(i,:)=Gregressed(:,t);
     end
@@ -256,14 +250,14 @@ end
 
 
 for t=1:length(data)
-Mi=interpolation_matrix(geom,[px(t) py(t)],'krigging',1,0,32);
-timebindata=decorrelate(Mi*bp2(data{t}),2);
-for i=1:size(data{t},1)
-P=ptp(timebindata(i,:) - beta{i}(1)*py(t) - beta{i}(2)*px(t));
-spikes4{i,t,1}=find(P>=6);
-spikes4{i,t,2}=P(spikes4{i,t,1});
-end
-t
+    Mi=interpolation_matrix(geom,[px(t) py(t)],'krigging',1,0,32);
+    timebindata=decorrelate(Mi*bp2(data{t}),2);
+    for i=1:size(data{t},1)
+        P=ptp(timebindata(i,:) - beta{i}(1)*py(t) - beta{i}(2)*px(t)); %% apply regression terms to each channel and each time bin
+        spikes4{i,t,1}=find(P>=threshold); % detect spikes
+        spikes4{i,t,2}=P(spikes4{i,t,1}); % capture amplitudes
+    end
+    t
 end
 
 
@@ -283,7 +277,7 @@ end
 
 
 %% visualization of maximum PTP
-Z=[X Xr Xr2 Xr3];   
+Z=[X Xr Xr2 Xr3];
 figure('units','normalized','outerposition',[0 0 1 1])
 imagesc(Z);colorbar
 hold on
@@ -347,24 +341,24 @@ subplot(3,1,3)
 hold on
 maxB=0;
 for t=1:length(data)
-A=spikes{ycoor,t,1}+30000*(t-1);
-B=spikes{ycoor,t,2}-6;if ~isempty(B);maxB=nanmax(maxB,nanmax(B));end
-plot(A(B>0),B(B>0),'b.','MarkerSize',0.5);
+    A=spikes{ycoor,t,1}+30000*(t-1);
+    B=spikes{ycoor,t,2}-threshold;if ~isempty(B);maxB=nanmax(maxB,nanmax(B));end
+    plot(A(B>0),B(B>0),'b.','MarkerSize',0.5);
 end
 for t=1:length(data)
-A=spikes2{ycoor,t,1}+30000*(t-1);
-B=spikes2{ycoor,t,2}-6;if ~isempty(B);maxB=nanmax(maxB,nanmax(B));end
-plot(A(B>0)+30000*200,B(B>0),'b.','MarkerSize',0.5);
+    A=spikes2{ycoor,t,1}+30000*(t-1);
+    B=spikes2{ycoor,t,2}-threshold;if ~isempty(B);maxB=nanmax(maxB,nanmax(B));end
+    plot(A(B>0)+30000*200,B(B>0),'b.','MarkerSize',0.5);
 end
 for t=1:length(data)
-A=spikes4{ycoor,t,1}+30000*(t-1);
-B=spikes4{ycoor,t,2}-6;if ~isempty(B);maxB=nanmax(maxB,nanmax(B));end
-plot(A(B>0)+2*30000*200,B(B>0),'b.','MarkerSize',0.5);
+    A=spikes4{ycoor,t,1}+30000*(t-1);
+    B=spikes4{ycoor,t,2}-threshold;if ~isempty(B);maxB=nanmax(maxB,nanmax(B));end
+    plot(A(B>0)+2*30000*200,B(B>0),'b.','MarkerSize',0.5);
 end
 for t=1:length(data)
-A=spikes3{ycoor,t,1}+30000*(t-1);
-B=spikes3{ycoor,t,2}-6;if ~isempty(B);maxB=nanmax(maxB,nanmax(B));end
-plot(A(B>0)+3*30000*200,B(B>0),'b.','MarkerSize',0.5);
+    A=spikes3{ycoor,t,1}+30000*(t-1);
+    B=spikes3{ycoor,t,2}-threshold;if ~isempty(B);maxB=nanmax(maxB,nanmax(B));end
+    plot(A(B>0)+3*30000*200,B(B>0),'b.','MarkerSize',0.5);
 end
 grid on
 plot([0.5+30000*200 0.5+30000*200],[0 maxB+0.5],'k-','LineWidth',2);
