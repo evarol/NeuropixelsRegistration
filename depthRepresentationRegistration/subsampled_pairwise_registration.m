@@ -25,7 +25,7 @@ tic;
 Dx=nan(length(H),length(H));
 Dy=nan(length(H),length(H));
 S=generate_random_tree(length(H),subsampling); S=or(S,S'); %% pre-allocate which subsampled registrations to perform -- if there are all zero rows, likely to kick an error
-num_reg=sum(S(:));
+num_reg=round(sum(S(:))/2);
 for i=1:length(H)
     for j=i:length(H)
         if S(i,j)==1
@@ -55,21 +55,4 @@ disp(['Centralizing the decentralized estimates...']);
 [py,py0]=robust_regression(Dy',robust_lambda);
 [px,px0]=robust_regression(Dx',robust_lambda);
 disp(['Centralizing the decentralized estimates...(Done)']);
-end
-
-function [p,p0]=robust_regression(D,lambda)
-% robust regression - estimates displacement parameters through outlier
-% pruning
-
-D0=D;
-S=zeros(size(D));
-p0=nanmean(D0-nanmean(D0,2),1);
-
-for t=1:10
-    p=nanmean(D-l1tf(nanmean(D,2),lambda),1);
-    P=D0-l1tf(nanmean(D,2),lambda);
-    S=abs(zscore(P,[],1))>2;S=or(S,S');
-    D=D0;
-    D(S==1)=nan;
-end
 end
