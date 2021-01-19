@@ -16,9 +16,9 @@ minmax = @(x)((x-min(x(:)))./max(x(:)-min(x(:))));
 %% load data
 addpath(genpath('/Users/erdem/Documents/Github/npy-matlab'));
 
-amps = readNPY('/Users/erdem/Downloads/NYU-18_2019-10-24_001_alf_probe01/spikes.amps.npy');
-depths = readNPY('/Users/erdem/Downloads/NYU-18_2019-10-24_001_alf_probe01/spikes.depths.npy');
-times = readNPY('/Users/erdem/Downloads/NYU-18_2019-10-24_001_alf_probe01/spikes.times.npy');
+amps = readNPY('/Users/erdem/Downloads/CSHL047_2020-01-20_001_alf_probe00/spikes.amps.npy');
+depths = readNPY('/Users/erdem/Downloads/CSHL047_2020-01-20_001_alf_probe00/spikes.depths.npy');
+times = readNPY('/Users/erdem/Downloads/CSHL047_2020-01-20_001_alf_probe00/spikes.times.npy');
 
 
 %% allocate bin sizes
@@ -55,10 +55,33 @@ end
 %% main decentralized registration routine
 [Dx,Dy,py,px,py0,px0]=subsampled_pairwise_registration(I,log(length(I))/length(I));
 
+
+
+%% Undoing the translation
+Xr=zeros(size(X));
+tic
+for t=1:length(I)
+    Xr(:,t)=imtranslate(X(:,t),[0 -py(t)]);
+    clc
+    fprintf(['Translating data (' num2str(t) '/' num2str(length(T)-1) ')...\n']);
+    fprintf(['\n' repmat('.',1,50) '\n\n'])
+    for tt=1:round(t*50/(length(T)-1))
+        fprintf('\b|\n');
+    end
+    TT=toc;
+    disp(['Time elapsed (minutes): ' num2str(TT/60) ' Time remaining (minutes): ' num2str(((length(T)-1)-t)*(TT/t)*(1/60))]);
+    
+end
 %% visuals
-subplot(5,1,1);plot(py,'LineWidth',1);title('Decentralized displacement estimate');xlabel('time bins');ylabel('displacement');grid on;set(gca,'xlim',[1 length(py)]);
+figure(1)
+subplot(5,1,1);plot(py,'LineWidth',1);title('Decentralized displacement estimate + Unregistered data');xlabel('time bins');ylabel('displacement');grid on;set(gca,'xlim',[1 length(py)]);
 subplot(5,1,[2 5]);imagesc(log1p(flipud(minmax(X))));colormap(flipud(gray(256)));title('mean ptp vs. time');xlabel('time bins');ylabel('depth');
+
+figure(2)
+subplot(5,1,1);plot(py,'LineWidth',1);title('Decentralized displacement estimate + Registered data');xlabel('time bins');ylabel('displacement');grid on;set(gca,'xlim',[1 length(py)]);
+subplot(5,1,[2 5]);imagesc(log1p(flipud(minmax(Xr))));colormap(flipud(gray(256)));title('mean ptp vs. time');xlabel('time bins');ylabel('depth');
 
 globalToc=toc(globalTic);
 
-disp(['Total time of computation : ' num2str(globalToc/60) ' minutes. Seconds of computation per second of recording: ' num2str(globalToc/length(T))]);
+disp(['Total time of computation : ' num2str(globalToc/60) ' minutes.']);
+disp(['Seconds of computation per second of recording: ' num2str(globalToc/length(T))]);
