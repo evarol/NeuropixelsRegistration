@@ -1,4 +1,4 @@
-function [Dx,Dy,py,px,py0,px0]=pairwise_reg(H,subsampling,resolution,robust_lambda)
+function [Dx,Dy,py,px,py0,px0]=subsampled_pairwise_registration(H,subsampling,resolution,robust_lambda)
 % decentralized registration
 % Input:  H             - (T x 1) cell   -  input image/histogram representation of data
 %         resolution    - 1x1 scalar     -  the subpixel resolution i.e. resolution = 100 --> 1/100th of pixel resolution
