@@ -5,7 +5,7 @@ close all
 
 globalTic=tic;
 %% parameters
-time_resolution  = 10; % in seconds
+time_resolution  = 1; % in seconds
 depth_resolution = 1; % in microns
 
 
@@ -16,9 +16,9 @@ minmax = @(x)((x-min(x(:)))./max(x(:)-min(x(:))));
 %% load data
 addpath(genpath('/Users/erdem/Documents/Github/npy-matlab'));
 
-amps = readNPY('spikes.amps.npy');
-depths = readNPY('spikes.depths.npy');
-times = readNPY('spikes.times.npy');
+amps = readNPY('/Users/erdem/Downloads/NYU-18_2019-10-24_001_alf_probe01/spikes.amps.npy');
+depths = readNPY('/Users/erdem/Downloads/NYU-18_2019-10-24_001_alf_probe01/spikes.depths.npy');
+times = readNPY('/Users/erdem/Downloads/NYU-18_2019-10-24_001_alf_probe01/spikes.times.npy');
 
 
 %% allocate bin sizes
@@ -53,7 +53,7 @@ for t=1:length(I)
 end
 
 %% main decentralized registration routine
-[Dx,Dy,py,px,py0,px0]=pairwise_reg(I,log(length(I))/length(I));
+[Dx,Dy,py,px,py0,px0]=subsampled_pairwise_registration(I,log(length(I))/length(I));
 
 %% visuals
 subplot(5,1,1);plot(py,'LineWidth',1);title('Decentralized displacement estimate');xlabel('time bins');ylabel('displacement');grid on;set(gca,'xlim',[1 length(py)]);
