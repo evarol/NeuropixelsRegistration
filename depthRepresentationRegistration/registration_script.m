@@ -7,8 +7,10 @@ globalTic=tic;
 %% parameters
 time_resolution  = 1; % in seconds
 depth_resolution = 1; % in microns
-subblocks=10; % number of rigid blocks of motion
+subblocks=1; % number of rigid blocks of motion
 blocksize=1000; % in microns
+resolution=100; %the subpixel resolution i.e. resolution = 100 --> 1/100th of pixel resolution
+robust_lambda=0.1; %trend filtering penalty to smoothen displacement estimates
 
 %% some helper functions
 minmax = @(x)((x-min(x(:)))./max(x(:)-min(x(:))));
@@ -54,8 +56,13 @@ for t=1:length(I)
 end
 
 %% main decentralized registration routine
+if subblocks==1
+    lower_end=1;
+    upper_end=size(I{1},1);
+else
 lower_end=linspace(1,size(I{1},1)-blocksize,subblocks);
 upper_end=linspace(blocksize,size(I{1},1),subblocks);
+end
 for s=1:subblocks
     blockcoor{s}=floor(lower_end(s)):ceil(upper_end(s));
     for t=1:length(I)
@@ -63,9 +70,22 @@ for s=1:subblocks
     end
 end
 
+subsampling_rate=log(length(I))/length(I); %% log(length(I))/length(I) is the subsampling rate - if the estimation is poor increase this
+
+
 for s=1:subblocks
-    [Dx{s},Dy{s},py{s},px{s},py0{s},px0{s}]=subsampled_pairwise_registration(Is(:,s),log(length(I))/length(I));
+    [Dx{s},Dy{s}]=subsampled_pairwise_registration(Is(:,s),subsampling_rate,resolution); 
 end
+
+
+%% robustifying the displacement estimates
+
+disp(['Centralizing the decentralized estimates...']);
+for s=1:subblocks
+[py{s},py0{s}]=robust_regression(Dy{s}',robust_lambda); %% if you get NaN's change robust_lambda to be higher or lower.
+[px{s},px0{s}]=robust_regression(Dx{s}',robust_lambda);
+end
+disp(['Centralizing the decentralized estimates...(Done)']);
 
 
 %% Undoing the translation

@@ -1,22 +1,19 @@
-function [Dx,Dy,py,px,py0,px0]=subsampled_pairwise_registration(H,subsampling,resolution,robust_lambda)
+function [Dx,Dy]=subsampled_pairwise_registration(H,subsampling,resolution)
 % decentralized registration
 % Input:  H             - (T x 1) cell   -  input image/histogram representation of data
+%         subsampling   - 1x1 scalar     - subsapling rate between 0 and 1
 %         resolution    - 1x1 scalar     -  the subpixel resolution i.e. resolution = 100 --> 1/100th of pixel resolution
-%         robust_lambda - 1x1 scalar     -  the trend filtering penalty for estimating the global displacement
 % Output: Dx,Dy         - (T x T) matrix -  pairwise displacement matrix along the x and y directions
-%         py,px         - (T x 1) vector -  trend filtered global displacement estimates along the x and y directions
-%         py0,px0       - (T x 1) vector -  u global displacement estimates along the x and y directions
+
 
 if nargin<2
     % default parameters
     subsampling=1;
     resolution = 100;
-    robust_lambda = 0.1;
 end
 
 if nargin<3
     resolution = 100;
-    robust_lambda = 1;
 end
 
 t=0;
@@ -51,8 +48,5 @@ for i=1:length(H)
 end
 
 
-disp(['Centralizing the decentralized estimates...']);
-[py,py0]=robust_regression(Dy',robust_lambda);
-[px,px0]=robust_regression(Dx',robust_lambda);
-disp(['Centralizing the decentralized estimates...(Done)']);
+
 end
