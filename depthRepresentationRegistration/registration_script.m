@@ -7,10 +7,10 @@ globalTic=tic;
 %% parameters
 time_resolution  = 1; % in seconds
 depth_resolution = 1; % in microns
-subblocks=1; % number of rigid blocks of motion
+subblocks=10; % number of rigid blocks of motion
 blocksize=1000; % in microns
 resolution=100; %the subpixel resolution i.e. resolution = 100 --> 1/100th of pixel resolution
-robust_lambda=0.1; %trend filtering penalty to smoothen displacement estimates
+robust_lambda=10000; %trend filtering penalty to smoothen displacement estimates
 
 %% some helper functions
 minmax = @(x)((x-min(x(:)))./max(x(:)-min(x(:))));
@@ -88,15 +88,19 @@ end
 disp(['Centralizing the decentralized estimates...(Done)']);
 
 
-%% Undoing the translation
-Xr=zeros(size(X));
-counts=zeros(size(X));
+%% vector fields
+V=nan(size(X,1),size(X,2),subblocks);
+for s=1:subblocks
+    V(blockcoor{s},:,s)=repmat(l1tf(py0{s}',1000)',[length(blockcoor{s}) 1]);
+end
+
+%% Undoing the translation with a  median vector field
+
+Vf=nanmedian(V,3);
+
 tic
 for t=1:length(I)
-    for s=1:subblocks
-        Xr(blockcoor{s},t)=Xr(blockcoor{s},t)+imtranslate(X(blockcoor{s},t),[0 -py{s}(t)]);
-        counts(blockcoor{s},t)=counts(blockcoor{s},t)+1;
-    end
+    Xr(:,t)=interp1((1:size(X,1))',X(:,t),(1:size(X,1))'+Vf(:,t));
     clc
     fprintf(['Translating data (' num2str(t) '/' num2str(length(T)-1) ')...\n']);
     fprintf(['\n' repmat('.',1,50) '\n\n'])
@@ -105,10 +109,9 @@ for t=1:length(I)
     end
     TT=toc;
     disp(['Time elapsed (minutes): ' num2str(TT/60) ' Time remaining (minutes): ' num2str(((length(T)-1)-t)*(TT/t)*(1/60))]);
-    
 end
 
-Xr=Xr./counts;
+
 %% visuals
 figure(1)
 subplot(5,1,1);
@@ -122,7 +125,7 @@ figure(2)
 subplot(5,1,1);
 for s=1:subblocks
     hold on
-    plot(py{s},'LineWidth',1);title('Decentralized displacement estimate + Registered data');xlabel('time bins');ylabel('displacement');grid on;set(gca,'xlim',[1 length(py{s})]);
+    plot(py0{s}+(s-1)*size(X,1)/s,'.');title('Decentralized displacement estimate + Registered data');xlabel('time bins');ylabel('displacement');grid on;set(gca,'xlim',[1 length(py{s})]);
 end
 subplot(5,1,[2 5]);imagesc(log1p(flipud(minmax(Xr))));colormap(flipud(gray(256)));title('mean ptp vs. time');xlabel('time bins');ylabel('depth');
 
