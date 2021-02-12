@@ -25,9 +25,5 @@ http://internationalbrainlab.org/data/2021-02-12_Varol
 
 Reference:
 
-Erdem Varol, Julien Boussard$, Nishchal Dethe, Olivier Winter, Anne Ura,The International Brain Laboratory, Anne Churchland$, Nick Steinmetz, Liam Paninski
-
-Decentralized motion inference and registration of Neuropixels data. 
-
-In ICASSP 2021 (To appear).
+Erdem Varol, Julien Boussard, Nishchal Dethe, Olivier Winter, Anne Urai, The International Brain Laboratory, Anne Churchland, Nick Steinmetz, Liam Paninski. Decentralized motion inference and registration of Neuropixels data. In ICASSP 2021 (To appear).
 
