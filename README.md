@@ -20,7 +20,8 @@ Summary of the approach:
 Comparison with Kilosort 2.5:
 ![Demo](https://github.com/evarol/NeuropixelsRegistration/blob/master/raster_icassp-1.png)
 Data used in this figure is provided by International Brain Laboratory:
-http://internationalbrainlab.org/data/2021-02-12_Varol
+
+<!-- http://internationalbrainlab.org/data/2021-02-12_Varol -->
 
 
 Reference:
