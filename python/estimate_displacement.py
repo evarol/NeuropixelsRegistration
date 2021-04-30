@@ -61,7 +61,13 @@ def estimate_displacement(reader, geomarray,
             ts = np.empty(ts_memmap.shape, dtype=np.int16)
             ts[:] = ts_memmap
             run_spike_detect(ts, geomarray, spike_output_directory, i, threshold=detection_threshold)
-    
+    elif reader_type == 'None': # reader is directory to bin file
+        second_bytesize = 2 * 385 * 30000
+        n_batches = int(os.path.getsize(reader) / second_bytesize)
+        for i in tqdm(range(n_batches)):
+            ts = np.fromfile(reader, dtype=np.int16, count=385*30000, offset=385*30000*i)
+            ts = ts.reshape((30000,-1))[:,:-1]
+            run_spike_detect(ts, geomarray, spike_output_directory, i, threshold=detection_threshold)
         
     # generate raster
     depths, times, amps, widths = gen_raster_info(spike_output_directory, num_chans=num_chans_per_spike)
@@ -126,7 +132,13 @@ def check_raster(reader, geomarray,
             ts = np.empty(ts_memmap.shape, dtype=np.int16)
             ts[:] = ts_memmap
             run_spike_detect(ts, geomarray, spike_output_directory, i, threshold=detection_threshold)
-    
+    elif reader_type == 'None': # reader is directory to bin file
+        second_bytesize = 2 * 385 * 30000
+        n_batches = int(os.path.getsize(reader) / second_bytesize)
+        for i in tqdm(range(n_batches)):
+            ts = np.fromfile(reader, dtype=np.int16, count=385*30000, offset=385*30000*i)
+            ts = ts.reshape((30000,-1))[:,:-1]
+            run_spike_detect(ts, geomarray, spike_output_directory, i, threshold=detection_threshold)
         
     # generate raster
     depths, times, amps, widths = gen_raster_info(spike_output_directory, num_chans=num_chans_per_spike)
@@ -162,6 +174,9 @@ def register(reader, geomarray, total_shift,
         n_batches = reader.n_batches
     elif reader_type == 'spikeglx':
         n_batches = int(reader.ns / reader.fs) # recording length in seconds
+    elif reader_type == None: # reader is directory to bin file
+        second_bytesize = 2 * 385 * 30000
+        n_batches = int(os.path.getsize(reader) / second_bytesize)
     
     # register raw data
     registered_output_directory = os.path.join('.', "registered")
@@ -543,6 +558,9 @@ def register_data_linear(i, reader, registered_output_directory, estimated_displ
         ts_memmap = reader._raw[sf*i:sf*(i+1),:-1]
         ts = np.empty(ts_memmap.shape, dtype=np.int16)
         ts[:] = ts_memmap
+    elif reader_type == 'None': # reader is directory to bin file
+        ts = np.fromfile(reader, dtype=np.int16, count=385*30000, offset=385*30000*i)
+        ts = ts.reshape((30000,-1))[:,:-1]
     ts = ts.T
     disp = np.concatenate((np.zeros(n_chans)[:,None],estimated_displacement[:,i][:,None]), axis=1)
     ts = griddata(geomarray, ts, geomarray + disp, method = 'linear', fill_value = 0)
