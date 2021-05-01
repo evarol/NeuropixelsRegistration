@@ -24,7 +24,7 @@ from scipy.spatial.distance import cdist
 
 from scipy.interpolate import griddata
 
-from yass.preprocess.util import merge_filtered_files
+from utils import merge_filtered_files
 
 # function that wraps around all functions
 # reader: yass reader
@@ -174,7 +174,7 @@ def register(reader, geomarray, total_shift,
         n_batches = reader.n_batches
     elif reader_type == 'spikeglx':
         n_batches = int(reader.ns / reader.fs) # recording length in seconds
-    elif reader_type == None: # reader is directory to bin file
+    elif reader_type == 'None': # reader is directory to bin file
         second_bytesize = 2 * 385 * 30000
         n_batches = int(os.path.getsize(reader) / second_bytesize)
     
