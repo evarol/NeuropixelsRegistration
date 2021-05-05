@@ -105,7 +105,8 @@ def estimate_displacement(reader, geomarray,
 
 # function that checks raster plot
 # reader: yass reader
-def check_raster(reader, geomarray, 
+def check_raster(reader, geomarray,
+             dtype = "int16",
              detection_threshold=6, 
              num_chans_per_spike=4,
              do_destripe=True,
@@ -133,10 +134,16 @@ def check_raster(reader, geomarray,
             ts[:] = ts_memmap
             run_spike_detect(ts, geomarray, spike_output_directory, i, threshold=detection_threshold)
     elif reader_type == 'None': # reader is directory to bin file
-        second_bytesize = 2 * 385 * 30000
+        if dtype == 'int16':
+            second_bytesize = 2 * 385 * 30000
+        elif dtype == 'float32':
+            second_bytesize = 4 * 384 * 30000
         n_batches = int(os.path.getsize(reader) / second_bytesize)
         for i in tqdm(range(n_batches)):
-            ts = np.fromfile(reader, dtype=np.int16, count=385*30000, offset=385*30000*i)
+            if dtype == 'int16':
+                ts = np.fromfile(reader, dtype=np.int16, count=385*30000, offset=385*30000*i)
+            elif dtype == 'float32':
+                ts = np.fromfile(reader, dtype=np.float32, count=384*30000, offset=384*30000*i)
             ts = ts.reshape((30000,-1))[:,:-1]
             run_spike_detect(ts, geomarray, spike_output_directory, i, threshold=detection_threshold)
         
