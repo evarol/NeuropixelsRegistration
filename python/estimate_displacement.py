@@ -40,43 +40,51 @@ def estimate_displacement(reader, geomarray,
              vert_smooth=3,
              horz_smooth=7,
              reader_type='yass', # also has an option 'spikeglx'
-             save_raster_info=True):
+             save_raster_info=True,
+             resume_with_raster=False):
     
-    # spike detection: detection + deduplication
-    spike_output_directory = os.path.join('.', "spikes")
-    if not os.path.exists(spike_output_directory):
-        os.makedirs(spike_output_directory)
+    if resume_with_raster:
+        depths = np.load('depths.npy')
+        times = np.load('times.npy')
+        amps = np.load('amps.npy')
+        widths = np.load('widths.npy')
+    else:
+        # spike detection: detection + deduplication
+        spike_output_directory = os.path.join('.', "spikes")
+        if not os.path.exists(spike_output_directory):
+            os.makedirs(spike_output_directory)
 
-    # ts: a raw data batch of size (sampling frequency, n_channels)
-    if reader_type == 'yass':
-        n_batches = reader.n_batches
-        for i in tqdm(range(n_batches)):
-            ts = reader.read_data_batch(i)
-            run_spike_detect(ts, geomarray, spike_output_directory, i, threshold=detection_threshold)
-    elif reader_type == 'spikeglx':
-        sf = int(reader.fs)
-        n_batches = int(reader.ns / reader.fs) # recording length in seconds
-        for i in tqdm(range(n_batches)):
-            ts_memmap = reader._raw[sf*i:sf*(i+1),:-1]
-            ts = np.empty(ts_memmap.shape, dtype=np.int16)
-            ts[:] = ts_memmap
-            run_spike_detect(ts, geomarray, spike_output_directory, i, threshold=detection_threshold)
-    elif reader_type == 'None': # reader is directory to bin file
-        second_bytesize = 2 * 385 * 30000
-        n_batches = int(os.path.getsize(reader) / second_bytesize)
-        for i in tqdm(range(n_batches)):
-            ts = np.fromfile(reader, dtype=np.int16, count=385*30000, offset=385*30000*i)
-            ts = ts.reshape((30000,-1))[:,:-1]
-            run_spike_detect(ts, geomarray, spike_output_directory, i, threshold=detection_threshold)
-        
-    # generate raster
-    depths, times, amps, widths = gen_raster_info(spike_output_directory, num_chans=num_chans_per_spike)
-    if save_raster_info:
-        # save depths, times, amps, widths
-        np.save('depths.npy', depths)
-        np.save('times.npy', times)
-        np.save('amps.npy', amps)
-        np.save('widths.npy', widths)
+        # ts: a raw data batch of size (sampling frequency, n_channels)
+        if reader_type == 'yass':
+            n_batches = reader.n_batches
+            for i in tqdm(range(n_batches)):
+                ts = reader.read_data_batch(i)
+                run_spike_detect(ts, geomarray, spike_output_directory, i, threshold=detection_threshold)
+        elif reader_type == 'spikeglx':
+            sf = int(reader.fs)
+            n_batches = int(reader.ns / reader.fs) # recording length in seconds
+            for i in tqdm(range(n_batches)):
+                ts_memmap = reader._raw[sf*i:sf*(i+1),:-1]
+                ts = np.empty(ts_memmap.shape, dtype=np.int16)
+                ts[:] = ts_memmap
+                run_spike_detect(ts, geomarray, spike_output_directory, i, threshold=detection_threshold)
+        elif reader_type == 'None': # reader is directory to bin file
+            second_bytesize = 2 * 385 * 30000
+            n_batches = int(os.path.getsize(reader) / second_bytesize)
+            for i in tqdm(range(n_batches)):
+                ts = np.fromfile(reader, dtype=np.int16, count=385*30000, offset=385*30000*i)
+                ts = ts.reshape((30000,-1))[:,:-1]
+                run_spike_detect(ts, geomarray, spike_output_directory, i, threshold=detection_threshold)
+
+        # generate raster
+        depths, times, amps, widths = gen_raster_info(spike_output_directory, num_chans=num_chans_per_spike)
+        if save_raster_info:
+            # save depths, times, amps, widths
+            np.save('depths.npy', depths)
+            np.save('times.npy', times)
+            np.save('amps.npy', amps)
+            np.save('widths.npy', widths)
+
         
     raster = gen_raster(depths, times, amps, geomarray)
     
