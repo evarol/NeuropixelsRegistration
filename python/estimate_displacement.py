@@ -41,18 +41,23 @@ def estimate_displacement(reader, geomarray,
              horz_smooth=7,
              reader_type='yass', # also has an option 'spikeglx'
              save_raster_info=True,
+             working_directory='./',
              resume_with_raster=False):
     
     if resume_with_raster:
-        depths = np.load('depths.npy')
-        times = np.load('times.npy')
-        amps = np.load('amps.npy')
-        widths = np.load('widths.npy')
+        depths = np.load(os.path.join(working_directory, 'depths.npy'))
+        times = np.load(os.path.join(working_directory, 'times.npy'))
+        amps = np.load(os.path.join(working_directory, 'amps.npy'))
+        widths = np.load(os.path.join(working_directory, 'widths.npy'))
     else:
         # spike detection: detection + deduplication
         spike_output_directory = os.path.join('.', "spikes")
         if not os.path.exists(spike_output_directory):
             os.makedirs(spike_output_directory)
+            
+        raster_info_directory = working_directory
+        if not os.path.exists(raster_info_directory):
+            os.makedirs(raster_info_directory)
 
         # ts: a raw data batch of size (sampling frequency, n_channels)
         if reader_type == 'yass':
@@ -80,10 +85,10 @@ def estimate_displacement(reader, geomarray,
         depths, times, amps, widths = gen_raster_info(spike_output_directory, num_chans=num_chans_per_spike)
         if save_raster_info:
             # save depths, times, amps, widths
-            np.save('depths.npy', depths)
-            np.save('times.npy', times)
-            np.save('amps.npy', amps)
-            np.save('widths.npy', widths)
+            np.save(os.path.join(raster_info_directory, 'depths.npy'), depths)
+            np.save(os.path.join(raster_info_directory, 'times.npy'), times)
+            np.save(os.path.join(raster_info_directory, 'amps.npy'), amps)
+            np.save(os.path.join(raster_info_directory, 'widths.npy'), widths)
 
         
     raster = gen_raster(depths, times, amps, geomarray)
@@ -120,12 +125,17 @@ def check_raster(reader, geomarray,
              do_destripe=True,
              do_denoise=True,
              reader_type='yass', # also has an option 'spikeglx'
+             working_directory='./',
              save_raster_info=True):
     
     # spike detection: detection + deduplication
     spike_output_directory = os.path.join('.', "spikes")
     if not os.path.exists(spike_output_directory):
         os.makedirs(spike_output_directory)
+        
+    raster_info_directory = working_directory
+    if not os.path.exists(raster_info_directory):
+        os.makedirs(raster_info_directory)
 
     # ts: a raw data batch of size (sampling frequency, n_channels)
     if reader_type == 'yass':
@@ -159,10 +169,10 @@ def check_raster(reader, geomarray,
     depths, times, amps, widths = gen_raster_info(spike_output_directory, num_chans=num_chans_per_spike)
     if save_raster_info:
         # save depths, times, amps, widths
-        np.save('depths.npy', depths)
-        np.save('times.npy', times)
-        np.save('amps.npy', amps)
-        np.save('widths.npy', widths)
+        np.save(os.path.join(raster_info_directory, 'depths.npy'), depths)
+        np.save(os.path.join(raster_info_directory, 'times.npy'), times)
+        np.save(os.path.join(raster_info_directory, 'amps.npy'), amps)
+        np.save(os.path.join(raster_info_directory, 'widths.npy'), widths)
         
     raster = gen_raster(depths, times, amps, geomarray)
     
