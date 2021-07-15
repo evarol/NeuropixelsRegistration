@@ -12,16 +12,16 @@ robust_regression_sigma=1;
 %% load data
 
 %% NP2 - spike localizations + max amplitude + spike times
-% amps = readNPY('NP2_data/max_ptp.npy');
-% depths = readNPY('NP2_data/optimized_z_position.npy');
-% times = readNPY('NP2_data/spike_times.npy');times=times/30000;
-% widths = readNPY('NP2_data/optimized_x_position.npy');
+amps = readNPY('NP2_data/max_ptp.npy');
+depths = readNPY('NP2_data/optimized_z_position.npy');
+times = readNPY('NP2_data/spike_times.npy');times=times/30000;
+widths = readNPY('NP2_data/optimized_x_position.npy');
 
 %% NP1 - spike localizations + max amplitude + spike times
-amps = readNPY('NP1_data/max_ptp.npy');
-depths = readNPY('NP1_data/optimized_z_positions.npy');
-times = readNPY('NP1_data/spike_times.npy');times=times/30000;
-widths = readNPY('NP1_data/optimized_x_positions.npy');
+% amps = readNPY('NP1_data/max_ptp.npy');
+% depths = readNPY('NP1_data/optimized_z_positions.npy');
+% times = readNPY('NP1_data/spike_times.npy');times=times/30000;
+% widths = readNPY('NP1_data/optimized_x_positions.npy');
 
 
 
@@ -78,7 +78,6 @@ data_reg=data;
 for i=1:size(Xd,2)
     Xd_reg(:,i)=imtranslate(Xd(:,i),[0 py(i)]);
     data_reg{i}=data{i}+[py(i) 0 0];
-    i
 end
 
 

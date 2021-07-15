@@ -24,7 +24,6 @@ else
     idx=(1:size(A,1))';
     pold=nan(size(Dy,2),1);
     for t=1:20
-        length(idx)
         p=lsqr(A(idx,:),V(idx,:));
         pold=p;
         idx=find(abs(zscore(A*p-V))<=sigma);
