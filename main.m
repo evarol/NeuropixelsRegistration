@@ -22,12 +22,13 @@ robust_regression_sigma=1;
 % times = readNPY('NP2_data/spike_times.npy');times=times/30000;
 % widths = readNPY('NP2_data/weighted_mean_x_position.npy');
 
-amps = readNPY('NP2_data/max_ptp.npy');
-depths = readNPY('NP2_data/all_cole_z_position.npy');
-times = readNPY('NP2_data/spike_times.npy');times=times/30000;
-widths = readNPY('NP2_data/all_cole_x_position.npy');
+% amps = readNPY('NP2_data/max_ptp.npy');
+% depths = readNPY('NP2_data/all_cole_z_position.npy');
+% times = readNPY('NP2_data/spike_times.npy');times=times/30000;
+% widths = readNPY('NP2_data/all_cole_x_position.npy');
 
 %% NP1 - spike localizations + max amplitude + spike times (user provided)
+
 % amps = readNPY('NP1_data/max_ptp.npy');
 % depths = readNPY('NP1_data/optimized_z_positions.npy');
 % times = readNPY('NP1_data/spike_times.npy');times=times/30000;
@@ -42,6 +43,11 @@ widths = readNPY('NP2_data/all_cole_x_position.npy');
 % depths = readNPY('NP1_data/np1_all_denoised_z_cole.npy');
 % times = readNPY('NP1_data/spike_times.npy');times=times/30000;
 % widths = readNPY('NP1_data/np1_all_denoised_x_cole.npy');
+
+
+%% simulated data
+[depths,amps,times,widths,p0]=simulated_localizations(1001);
+
 
 
 %% allocate bin sizes
