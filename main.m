@@ -1,7 +1,8 @@
 clear all
 clc
 close all
-
+minmax = @(x)((x-min(x(:)))./max(x(:)-min(x(:))));
+vec=@(x)(x(:));
 globalTic=tic;
 %% parameters
 time_resolution=1;
@@ -46,7 +47,7 @@ robust_regression_sigma=1;
 
 
 %% simulated data
-[depths,amps,times,widths,p0]=simulated_localizations(1001);
+[depths,amps,times,widths,p0]=simulated_localizations(10001);
 
 
 
@@ -93,7 +94,7 @@ for i=1:size(Xd,2)
     Ir{i}=Xd(:,i);
 end
 % generate pairwise displacement matrix
-[~,Dy,Csub]=subsampled_pairwise_registration(Ir,subsampling_level,100,'');
+[~,Dy,Csub]=subsampled_pairwise_registration(Ir,subsampling_level,10,'');
 
 % do robust regression to get the central estimate
 py=psolver(Dy',robust_regression_sigma);py=py';
@@ -112,8 +113,8 @@ disp(['Total time taken: ' num2str(globalToc) ' seconds. Time per 1 second of da
 %% visualization
 figure('units','normalized','outerposition',[0 0 1 0.4])
 subplot(1,3,1)
-imagesc([Xd]);title('Uncorrected raster');colormap(othercolor('Msunsetcolors'));xlabel('time(s)');ylabel('depth(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);;colorbar
+imagesc(Xd);title('Uncorrected raster');colormap(othercolor('Msunsetcolors'));xlabel('time(s)');ylabel('depth(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);;colorbar
 subplot(1,3,3)
-imagesc([Xd_reg]);title('Registered raster');colormap(othercolor('Msunsetcolors'));xlabel('time(s)');ylabel('depth(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);;colorbar
+imagesc(Xd_reg);title('Registered raster');colormap(othercolor('Msunsetcolors'));xlabel('time(s)');ylabel('depth(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);;colorbar
 subplot(1,3,2)
 plot(py,'m.');title('Displacement estimate');set(gca,'color','k');xlabel('time(s)');ylabel('y-displacement(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);

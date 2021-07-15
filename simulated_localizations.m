@@ -10,7 +10,7 @@ num_obj=50;
 spread=200;
 ptp_variance=5;
 % num_bins=100;
-movement=1;
+movement=2;
 for k=1:num_obj
     mu(k,:)=[randi([x_box(1) x_box(2)]) randi([z_box(1) z_box(2)]) randi([ptp_box(1) ptp_box(2)])];
     sigma(:,:,k)=zeros(3);
@@ -32,8 +32,8 @@ for t=1:num_bins
     X{t} = random(gm,1000);
     [~,idx]=sort(X{t}(:,2));
     X{t}=X{t}(idx,:);
-%     toremove=find(or(or(X{t}(:,1)>x_box(2),X{t}(:,1)<x_box(1)),or(X{t}(:,2)>z_box(2),X{t}(:,2)<z_box(1))));
-%     X{t}(toremove,:)=[];
+    toremove=find(or(or(X{t}(:,1)>x_box(2),X{t}(:,1)<x_box(1)),or(X{t}(:,2)>z_box(2),X{t}(:,2)<z_box(1))));
+    X{t}(toremove,:)=[];
 end
 
 depths=[];widths=[];times=[];amps=[];
