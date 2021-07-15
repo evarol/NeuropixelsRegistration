@@ -15,10 +15,10 @@ robust_regression_sigma=1;
 %% NP2 - spike localizations + max amplitude + spike times (user provided)
 
 %% Triangulation localization
-amps = readNPY('NP2_data/max_ptp.npy');
-depths = readNPY('NP2_data/optimized_z_position.npy');
-times = readNPY('NP2_data/spike_times.npy');times=times/30000;
-widths = readNPY('NP2_data/optimized_x_position.npy');
+% amps = readNPY('NP2_data/max_ptp.npy');
+% depths = readNPY('NP2_data/optimized_z_position.npy');
+% times = readNPY('NP2_data/spike_times.npy');times=times/30000;
+% widths = readNPY('NP2_data/optimized_x_position.npy');
 
 %% NEW Triangulation localization
 % amps = readNPY('NP2_data/new/amplitudes.npy');
@@ -61,7 +61,7 @@ widths = readNPY('NP2_data/optimized_x_position.npy');
 
 
 %% simulated data
-% [depths,amps,times,widths,p0]=simulated_localizations(1000);
+[depths,amps,times,widths,p0]=simulated_localizations(1000);
 
 
 
@@ -73,9 +73,9 @@ Ybins=floor(min(depths)):depth_resolution:ceil(max(depths));
 %% generate image representations - depths
 tic;
 for t=1:length(T)-1
-    data{t}(:,1)=depths(and(times>=T(t),times<=T(t+1)));
-    data{t}(:,2)=amps(and(times>=T(t),times<=T(t+1)));
-    data{t}(:,3)=widths(and(times>=T(t),times<=T(t+1)));
+    data{t}(:,1)=depths(and(times>T(t),times<=T(t+1)));
+    data{t}(:,2)=amps(and(times>T(t),times<=T(t+1)));
+    data{t}(:,3)=widths(and(times>T(t),times<=T(t+1)));
     for y=1:length(Ybins)-1
         I{t}(y,1)=mean(data{t}(and(data{t}(:,1)>=Ybins(y),data{t}(:,1)<=Ybins(y+1)),2));
     end
@@ -108,16 +108,17 @@ for i=1:size(Xd,2)
     Ir{i}=Xd(:,i);
 end
 % generate pairwise displacement matrix
-[~,Dy,Csub]=subsampled_pairwise_registration(Ir,subsampling_level,10,'');
+[~,Dy_im,~]=subsampled_pairwise_registration(Ir,subsampling_level,10,'');
+[~,Dy_icp,~]=subsampled_pairwise_icp(data,subsampling_level,10,'');
 
 % do robust regression to get the central estimate
-py=psolver(Dy',robust_regression_sigma);py=py';
-
+py_icp=psolver(Dy_icp',1);py_icp=py_icp';
+py_im=psolver(Dy_im',1);py_im=py_im';
 %% registration
 data_reg=data;
 for i=1:size(Xd,2)
-    Xd_reg(:,i)=imtranslate(Xd(:,i),[0 py(i)]);
-    data_reg{i}=data{i}+[py(i) 0 0];
+    Xd_reg_icp(:,i)=imtranslate(Xd(:,i),[0 py_icp(i)]);
+    Xd_reg_im(:,i)=imtranslate(Xd(:,i),[0 py_im(i)]);
 end
 
 
@@ -126,9 +127,14 @@ disp(['Total time taken: ' num2str(globalToc) ' seconds. Time per 1 second of da
 
 %% visualization
 figure('units','normalized','outerposition',[0 0 1 0.4])
-subplot(1,3,1)
+subplot(1,4,1)
 imagesc(Xd);title('Uncorrected raster');colormap(othercolor('Msunsetcolors'));xlabel('time(s)');ylabel('depth(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);;colorbar
-subplot(1,3,3)
-imagesc(Xd_reg);title('Registered raster');colormap(othercolor('Msunsetcolors'));xlabel('time(s)');ylabel('depth(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);;colorbar
-subplot(1,3,2)
-plot(py,'m.');title('Displacement estimate');set(gca,'color','k');xlabel('time(s)');ylabel('y-displacement(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);
+subplot(1,4,3)
+imagesc(Xd_reg_im);title('Image based registered raster');colormap(othercolor('Msunsetcolors'));xlabel('time(s)');ylabel('depth(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);;colorbar
+subplot(1,4,4)
+imagesc(Xd_reg_icp);title('ICP Registered raster');colormap(othercolor('Msunsetcolors'));xlabel('time(s)');ylabel('depth(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);;colorbar
+subplot(1,4,2)
+plot(py_im,'m.');title('Displacement estimate');set(gca,'color','k');xlabel('time(s)');ylabel('y-displacement(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);
+hold on
+plot(py_icp,'c.');title('Displacement estimate');set(gca,'color','k');xlabel('time(s)');ylabel('y-displacement(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);
+legend({'image based','point cloud icp'},'Color','w');
