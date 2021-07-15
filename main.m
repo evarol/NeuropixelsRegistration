@@ -15,10 +15,17 @@ robust_regression_sigma=1;
 %% NP2 - spike localizations + max amplitude + spike times (user provided)
 
 %% Triangulation localization
-% amps = readNPY('NP2_data/max_ptp.npy');
-% depths = readNPY('NP2_data/optimized_z_position.npy');
-% times = readNPY('NP2_data/spike_times.npy');times=times/30000;
-% widths = readNPY('NP2_data/optimized_x_position.npy');
+amps = readNPY('NP2_data/max_ptp.npy');
+depths = readNPY('NP2_data/optimized_z_position.npy');
+times = readNPY('NP2_data/spike_times.npy');times=times/30000;
+widths = readNPY('NP2_data/optimized_x_position.npy');
+
+%% NEW Triangulation localization
+% amps = readNPY('NP2_data/new/amplitudes.npy');
+% depths = readNPY('NP2_data/new/z_position.npy');
+% times = readNPY('NP2_data/new/spike_times.npy');times=times/30000;
+% widths = readNPY('NP2_data/new/x_position.npy');
+
 
 %% VAE localization
 % amps = readNPY('NP2_data/max_ptp.npy');
@@ -35,10 +42,10 @@ robust_regression_sigma=1;
 %% NP1 - spike localizations + max amplitude + spike times (user provided)
 
 %% Triangulation localization
-amps = readNPY('NP1_data/max_ptp.npy');
-depths = readNPY('NP1_data/optimized_z_positions.npy');
-times = readNPY('NP1_data/spike_times.npy');times=times/30000;
-widths = readNPY('NP1_data/optimized_x_positions.npy');
+% amps = readNPY('NP1_data/max_ptp.npy');
+% depths = readNPY('NP1_data/optimized_z_positions.npy');
+% times = readNPY('NP1_data/spike_times.npy');times=times/30000;
+% widths = readNPY('NP1_data/optimized_x_positions.npy');
 
 %% VAE localization
 % amps = readNPY('NP1_data/max_ptp.npy');
@@ -54,7 +61,7 @@ widths = readNPY('NP1_data/optimized_x_positions.npy');
 
 
 %% simulated data
-[depths,amps,times,widths,p0]=simulated_localizations(1000);
+% [depths,amps,times,widths,p0]=simulated_localizations(1000);
 
 
 
