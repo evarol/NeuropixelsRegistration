@@ -15,10 +15,10 @@ robust_regression_sigma=1;
 %% NP2 - spike localizations + max amplitude + spike times (user provided)
 
 %% Triangulation localization
-% amps = readNPY('NP2_data/max_ptp.npy');
-% depths = readNPY('NP2_data/optimized_z_position.npy');
-% times = readNPY('NP2_data/spike_times.npy');times=times/30000;
-% widths = readNPY('NP2_data/optimized_x_position.npy');
+amps = readNPY('NP2_data/max_ptp.npy');
+depths = readNPY('NP2_data/optimized_z_position.npy');
+times = readNPY('NP2_data/spike_times.npy');times=times/30000;
+widths = readNPY('NP2_data/optimized_x_position.npy');
 
 %% NEW Triangulation localization
 % amps = readNPY('NP2_data/new/amplitudes.npy');
@@ -61,7 +61,7 @@ robust_regression_sigma=1;
 
 
 %% simulated data
-[depths,amps,times,widths,p0]=simulated_localizations(1000);
+% [depths,amps,times,widths,p0]=simulated_localizations(1000);
 
 
 
@@ -112,8 +112,9 @@ end
 [~,Dy_icp,~]=subsampled_pairwise_icp(data,subsampling_level,10,'');
 
 % do robust regression to get the central estimate
-py_icp=psolver(Dy_icp',1);py_icp=py_icp';
-py_im=psolver(Dy_im',1);py_im=py_im';
+py_icp=psolver(Dy_icp');py_icp=py_icp';
+py_im=psolver(Dy_im');py_im=py_im';
+% py_icp=py_im;
 %% registration
 data_reg=data;
 for i=1:size(Xd,2)
@@ -134,7 +135,7 @@ imagesc(Xd_reg_im);title('Image based registered raster');colormap(othercolor('M
 subplot(1,4,4)
 imagesc(Xd_reg_icp);title('ICP Registered raster');colormap(othercolor('Msunsetcolors'));xlabel('time(s)');ylabel('depth(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);;colorbar
 subplot(1,4,2)
-plot(py_im,'m.');title('Displacement estimate');set(gca,'color','k');xlabel('time(s)');ylabel('y-displacement(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);
+plot([py_im nan(size(py_icp))],'m.');title('Displacement estimate');set(gca,'color','k');xlabel('time(s)');ylabel('y-displacement(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);
 hold on
-plot(py_icp,'c.');title('Displacement estimate');set(gca,'color','k');xlabel('time(s)');ylabel('y-displacement(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);
+plot([nan(size(py_im)) py_icp],'c.');title('Displacement estimate');set(gca,'color','k');xlabel('time(s)');ylabel('y-displacement(um)');set(gca,'FontWeight','bold','FontSize',20,'TickLength',[0 0]);
 legend({'image based','point cloud icp'},'Color','w');

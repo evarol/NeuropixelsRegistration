@@ -1,4 +1,4 @@
-function  [Dx,Dy,C]=subsampled_pairwise_icp(H,subsampling,resolution,message)
+function  [Dx,Dy,C]=subsampled_pairwise_nw(H,subsampling,resolution,message)
 % decentralized registration
 % Input:  H             - (T x 1) cell   -  input image/histogram representation of data
 %         subsampling   - 1x1 scalar     - subsapling rate between 0 and 1
@@ -33,18 +33,18 @@ num_reg=round(sum(S(:))/2);
 for i=1:length(H)
     for j=i:length(H)
         if S(i,j)==1
-            [~, TT, ER, ~] = icp([H{i}(:,[1 3]) zeros(size(H{i},1),1)]',[H{j}(:,[1 3]) zeros(size(H{j},1),1)]');
-            xoffSet=TT(2);
-            yoffSet=TT(1);
+            [~,~,~,~,beta]=nw(H{i}(:,1),H{j}(:,1),1);
+            xoffSet=0;
+            yoffSet=beta;
             Dx(i,j)=xoffSet;
             Dy(i,j)=yoffSet;
             Dx(j,i)=-Dx(i,j);
             Dy(j,i)=-Dy(i,j);
-            C(i,j)=ER(end);
-            C(j,i)=ER(end);
+            C(i,j)=0;
+            C(j,i)=0;
             t=t+1;
             clc
-            fprintf([message 'Decentralized ICP (' num2str(t) '/' num2str(num_reg) ')...\n']);
+            fprintf([message 'Decentralized NW (' num2str(t) '/' num2str(num_reg) ')...\n']);
             fprintf(['\n' repmat('.',1,50) '\n\n'])
             for tt=1:round(t*50/num_reg)
                 fprintf('\b|\n');
