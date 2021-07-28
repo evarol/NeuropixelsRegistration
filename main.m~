@@ -10,7 +10,7 @@ depth_resolution=1;
 denoising_sigma = 0.1;
 subsampling_level=log(1000)/1000;
 robust_regression_sigma=1;
-reg_fit_sigma=0.1; %% weight for emphasizing better fit pairwise registrations
+reg_fit_sigma=0.1;
 time_sigma=1000; %% weight for emphasizing similar time points
 %% load data
 
