@@ -28,7 +28,7 @@ def estimate_motion(locs,
              do_destripe=True,
              do_denoise=True, # Poisson denoising
              sigma=0.1,
-             h=0.1,
+             h=1.,
              patch_size=5,
              patch_distance=5,
              reg_win_num=10, # set to 1 for rigid
@@ -100,7 +100,7 @@ def gen_raster(locs, times, amps, geom, direction):
     return raster/raster_count
 
 
-def poisson_denoising(z, sigma=0.1, h=0.1,  
+def poisson_denoising(z, sigma=0.1, h=1.,  
                       estimate_sig=False, fast_mode=True, multichannel=False,
                      patch_size=5,patch_distance=5):
     """
