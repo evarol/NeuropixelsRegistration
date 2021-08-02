@@ -14,6 +14,9 @@ import os
 
 from skimage.restoration import denoise_nl_means, estimate_sigma
 
+from numpy.fft import fft2, ifft2, fftshift, ifftshift # Python DFT
+import pywt
+
 from scipy.stats import norm
 from scipy.ndimage import shift
 
@@ -22,7 +25,12 @@ def estimate_motion(locs,
                     amps, 
                     geomarray, 
                     direction, # 'x', 'y', 'z'
+             do_destripe=True,
              do_denoise=True, # Poisson denoising
+             sigma=0.1,
+             h=0.1,
+             patch_size=5,
+             patch_distance=5,
              reg_win_num=10, # set to 1 for rigid
              reg_block_num=100, # set to 1 for rigid
              iteration_num=2):
@@ -34,10 +42,17 @@ def estimate_motion(locs,
             
     raster = gen_raster(locs, times, amps, geomarray, direction)
     
-    if do_denoise:
-        denoised = poisson_denoising(raster)
+    if do_destripe:
+        destriped = destripe(raster)
     else:
-        denoised = raster
+        destriped = raster
+    
+    if do_denoise:
+        denoised = poisson_denoising(destriped,sigma=sigma,h=h,
+                                     patch_size=patch_size,
+                                     patch_distance=patch_distance)
+    else:
+        denoised = destriped
     
     # decentralized registration
     total_shift = decentralized_registration(denoised, 
@@ -85,7 +100,9 @@ def gen_raster(locs, times, amps, geom, direction):
     return raster/raster_count
 
 
-def poisson_denoising(z, sigma=0.5, h=0.1, scale=5, estimate_sig=False, fast_mode=True, multichannel=False):
+def poisson_denoising(z, sigma=0.1, h=0.1,  
+                      estimate_sig=False, fast_mode=True, multichannel=False,
+                     patch_size=5,patch_distance=5):
     """
     Poisson denoising (Anscombe transformation -> Gaussin denoising -> inverse transformation)
     Change sigma and h to adjust denoising
@@ -97,16 +114,41 @@ def poisson_denoising(z, sigma=0.5, h=0.1, scale=5, estimate_sig=False, fast_mod
     z_anscombe = 2. * np.sqrt(minmax + (3. / 8.))
     
     if estimate_sig:
-        sigma = np.mean(estimate_sigma(z_anscombe, multichannel=multichannel)) * scale
+        sigma = np.mean(estimate_sigma(z_anscombe, multichannel=multichannel))
         print("estimated sigma: {}".format(sigma))
     # Gaussian denoising
-    z_anscombe_denoised = denoise_nl_means(z_anscombe, h=h*sigma, sigma=sigma, fast_mode=fast_mode) # NL means denoising
+    z_anscombe_denoised = denoise_nl_means(z_anscombe, h=h*sigma, sigma=sigma,
+                                           fast_mode=fast_mode, patch_size=patch_size,
+                                           patch_distance=patch_distance) # NL means denoising
 
     z_inverse_anscombe = (z_anscombe_denoised / 2.)**2 + 0.25 * np.sqrt(1.5) * z_anscombe_denoised**-1 - (11. / 8.) * z_anscombe_denoised**-2 +(5. / 8.) * np.sqrt(1.5) * z_anscombe_denoised**-3 - (1. / 8.)
     
     z_inverse_anscombe_scaled = ((z.max() - z.min()) * z_inverse_anscombe) + z.min()
     
     return z_inverse_anscombe_scaled
+
+def destripe(raster):
+    D, W = raster.shape
+    LL0 = raster
+    wlet = 'db5'
+    coeffs = pywt.wavedec2(LL0, wlet)
+    L = len(coeffs)
+    for i in range(1,L):
+        HL = coeffs[i][1]    
+        Fb = fft2(HL)   
+        Fb = fftshift(Fb)
+        mid = Fb.shape[0]//2
+        Fb[mid,:] = 0
+        Fb[mid-1,:] /= 3
+        Fb[mid+1,:] /= 3
+        Fb = ifftshift(Fb)   
+        coeffs[i]= (coeffs[i][0], np.real(ifft2(Fb)), coeffs[i][2] )
+    LL = pywt.waverec2(coeffs, wlet)
+    LL = LL[:D,:W]
+    
+    destriped = np.zeros_like(raster)
+    destriped[:D,:W] = LL
+    return destriped
 
 def get_gaussian_window(height, width, loc, scale=1):
     """
@@ -204,7 +246,7 @@ def save_registered_raster(raster_sh, i, output_directory):
     fname = os.path.join(output_directory, "raster_{}.png".format(str(i+1).zfill(6)))
     print('plotting...')
     plt.figure(figsize=(16, 10))
-    plt.imshow(raster_sh, vmin=0, aspect="auto", cmap=plt.get_cmap('inferno'))
+    plt.imshow(raster_sh, vmin=0, vmax=30, aspect="auto", cmap=plt.get_cmap('inferno'))
     plt.ylabel("depth", fontsize=16)
     plt.xlabel("time", fontsize=16)
     plt.savefig(fname,bbox_inches='tight')
@@ -252,6 +294,7 @@ def decentralized_registration(raster, win_num=1, reg_block_num=1, iter_num=4):
         for j, w in enumerate(window_list):
             w_raster = w*raster_i
             displacement_matrix = calc_displacement_matrix_raster((w_raster).T[:,np.newaxis,:])
+            np.save('displacement_matrix.npy', displacement_matrix)
             disp = calc_displacement(displacement_matrix)
             shift_amt += w * disp[np.newaxis,:]
             shifts[j] += disp
